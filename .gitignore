@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+dist/
+web-build/
+.env
+.env.*.local
+apps/server/data/
+apps/client/.expo/
+*.log
+.DS_Store
