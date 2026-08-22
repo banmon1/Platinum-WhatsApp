@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "main": "dist/src/index.js",
+  "exports": {
+    ".": "./dist/src/index.js",
+    "./app": "./dist/src/app.js"
+  },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "start": "node dist/src/index.js",

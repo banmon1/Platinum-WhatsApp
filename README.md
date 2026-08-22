@@ -7,18 +7,24 @@ A universal Expo application with a persistent Node.js service for WhatsApp QR p
 ```text
 Platinum WhatsApp/
 ├─ apps/
-│  ├─ client/                 Expo + React Native Web
+│  ├─ client/                 Expo + React Native Web interface
 │  │  ├─ app/                File-based screens and web routes
 │  │  ├─ src/components/     Shared universal UI
 │  │  ├─ src/context/        Live API state and polling
 │  │  └─ assets/             App icon and platform assets
-│  └─ server/                 Node.js + TypeScript service
-│     ├─ src/index.ts         HTTP API and message routing
-│     ├─ src/whatsapp.ts      Baileys QR session and messaging
-│     ├─ src/campaign-worker.ts Durable 10-minute queue
-│     ├─ src/ai.ts            OpenAI response pipeline
-│     ├─ src/database.ts      SQLite schema and persistence
-│     └─ data/                Local runtime data, ignored by Git
+│  ├─ server/                 Node.js + TypeScript service
+│  │  ├─ src/app.ts           Reusable API and internal server startup
+│  │  ├─ src/index.ts         Standalone development entry point
+│  │  ├─ src/whatsapp.ts      Baileys QR session and messaging
+│  │  ├─ src/campaign-worker.ts Durable 10-minute queue
+│  │  ├─ src/ai.ts            OpenAI response pipeline
+│  │  ├─ src/database.ts      SQLite schema and persistence
+│  │  └─ data/                Local runtime data, ignored by Git
+│  └─ desktop/                Electron Windows application
+│     ├─ src/main.mjs         Internal server + custom desktop window
+│     ├─ src/preload.cjs      Safe custom-window controls
+│     ├─ assets/              Transparent icon, ICO, and splash
+│     └─ scripts/             Windows packaging preparation
 ├─ .env.example
 └─ package.json               All workspace commands
 ```
@@ -29,7 +35,18 @@ Platinum WhatsApp/
 - `/campaign` — enter opted-in numbers and one message, Run/Stop/Resume.
 - `/ai` — save the API key, model, prompt, and enable automatic replies.
 - `/activity` — inspect campaign, delivery, incoming-message, and AI events.
-- `/settings` — set the API address for this web/mobile device.
+
+The Windows build has no server-address screen. It starts a private loopback service automatically on a free internal port and opens the interface against that port.
+
+## Windows installer
+
+The ready installer is generated at `apps/desktop/release/Platinum-WhatsApp-Setup-1.0.1.exe`.
+
+```powershell
+npm run build:windows
+```
+
+The installer creates the Start menu and desktop shortcuts. The installed application uses the custom rounded icon, shows the pulsing acid-yellow splash, and uses the in-app minimize, maximize, and close buttons. Persistent WhatsApp credentials, the encrypted OpenAI key, campaigns, and activity are stored under the current Windows user's application-data folder.
 
 ## Start locally
 
@@ -40,7 +57,7 @@ npm install
 npm run dev
 ```
 
-The API listens on `http://localhost:8787`; Expo prints the web address. On a physical phone, open Settings in the app and use the computer's LAN address, for example `http://192.168.1.20:8787`. Allow that port through the local firewall only on trusted networks.
+This development command exposes the API on `http://localhost:8787`; that address is only for developers. End users of the Windows installer never enter or see it.
 
 ## First use
 
@@ -55,6 +72,7 @@ The API key is encrypted before it reaches SQLite and is never returned to the c
 
 ```powershell
 npm run check
+npm run build:windows
 npm run android -w @platinum/client
 npm run ios -w @platinum/client
 ```
@@ -66,5 +84,6 @@ npm run ios -w @platinum/client
 - The first campaign message sends immediately; every later attempt is scheduled ten minutes after the previous attempt.
 - Campaign and recipient state is stored in SQLite, so a running campaign continues after a server restart.
 - Groups, broadcasts, status messages, and messages sent by the linked account are excluded from AI replies.
-- Keep the backend running continuously. Closing the web or mobile interface does not stop it.
+- On Windows, the backend starts and closes with the desktop application automatically.
+- Future Android/iOS builds can reuse the Expo interface, but the persistent Baileys service must remain on an always-on backend that those mobile builds can reach.
 - QR/Baileys is an unofficial WhatsApp Web integration. Use a dedicated number, honor opt-out requests, and message only recipients who gave permission.

@@ -18,7 +18,9 @@ function findServerRoot() {
 export const serverRoot = findServerRoot();
 dotenv.config({ path: resolve(serverRoot, '.env') });
 
-export const dataDir = resolve(serverRoot, 'data');
+export const dataDir = process.env.PLATINUM_DATA_DIR
+  ? resolve(process.env.PLATINUM_DATA_DIR)
+  : resolve(serverRoot, 'data');
 export const authDir = resolve(dataDir, 'whatsapp-auth');
 export const databasePath = resolve(dataDir, 'platinum.sqlite');
 export const secretPath = resolve(dataDir, 'nabilo-secret.key');

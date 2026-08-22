@@ -1,0 +1,65 @@
+{
+  "name": "@platinum/desktop",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "prepare:runtime": "npm run build -w @platinum/server && npm run export:web -w @platinum/client && node scripts/nabilo-prepare-runtime.mjs && node scripts/nabilo-build-icon.mjs",
+    "start": "npm run prepare:runtime && electron .",
+    "dist:win": "npm run prepare:runtime && electron-builder --win nsis --x64"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "^7.0.0-rc.13",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "openai": "^5.20.1",
+    "pino": "^9.14.0",
+    "qrcode": "^1.5.4",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "electron": "43.4.1",
+    "electron-builder": "26.15.3",
+    "png-to-ico": "3.0.2"
+  },
+  "build": {
+    "appId": "com.platinum.whatsappstudio",
+    "productName": "Platinum WhatsApp",
+    "artifactName": "Platinum-WhatsApp-Setup-${version}.${ext}",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "nabilo-runtime/server/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "nabilo-runtime/client",
+        "to": "client"
+      }
+    ],
+    "win": {
+      "icon": "assets/platinum.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Platinum WhatsApp",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

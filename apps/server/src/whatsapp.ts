@@ -111,6 +111,15 @@ export class WhatsAppService {
     return this.getStatus();
   }
 
+  shutdown() {
+    this.intentionallyLoggedOut = true;
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    this.socket?.end(undefined);
+    this.socket = null;
+    this.update({ state: 'disconnected', qrDataUrl: null });
+  }
+
   async sendText(target: string, text: string) {
     if (!this.socket || this.status.state !== 'connected') throw new Error('WhatsApp is not connected');
     const jid = target.includes('@') ? target : `${target}@s.whatsapp.net`;
