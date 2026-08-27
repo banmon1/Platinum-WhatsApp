@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 import { z } from 'zod';
 import { aiResponder } from './ai.js';
+import { loginGuard, readBearerToken } from './auth.js';
 import { campaignWorker } from './campaign-worker.js';
 import { clientOrigin } from './config.js';
 import { database } from './database.js';
@@ -15,17 +16,80 @@ export interface PlatinumServerOptions {
   host?: string;
   clientDistPath?: string;
   autoConnectWhatsApp?: boolean;
+  sameOriginOnly?: boolean;
 }
 
-export function createPlatinumApp(clientDistPath?: string) {
+interface PlatinumAppSecurityOptions {
+  sameOriginOnly?: boolean;
+  onAuthenticated?: () => void;
+  onLoggedOut?: () => void;
+}
+
+export function createPlatinumApp(clientDistPath?: string, security: PlatinumAppSecurityOptions = {}) {
   const app = express();
   app.disable('x-powered-by');
-  app.use(cors({ origin: clientOrigin === '*' ? true : clientOrigin.split(',').map((item) => item.trim()) }));
+  if (security.sameOriginOnly) {
+    app.use((req, res, next) => {
+      const origin = req.header('origin');
+      if (!origin) return next();
+      try {
+        if (new URL(origin).host !== req.header('host')) {
+          return res.status(403).json({ error: 'Cross-origin access is not allowed.' });
+        }
+      } catch {
+        return res.status(403).json({ error: 'Cross-origin access is not allowed.' });
+      }
+      next();
+    });
+  } else {
+    app.use(cors({ origin: clientOrigin === '*' ? true : clientOrigin.split(',').map((item) => item.trim()) }));
+  }
   app.use(express.json({ limit: '256kb' }));
+  app.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    next();
+  });
   const asyncRoute = (handler: (req: express.Request, res: express.Response) => Promise<unknown>) =>
     (req: express.Request, res: express.Response, next: express.NextFunction) => void handler(req, res).catch(next);
 
   app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'Platinum WhatsApp API', time: new Date().toISOString() }));
+  const loginSchema = z.object({
+    email: z.string().trim().email().max(254),
+    password: z.string().min(1).max(256),
+  });
+  app.post('/api/auth/login', (req, res) => {
+    const input = loginSchema.parse(req.body);
+    const result = loginGuard.login(input.email, input.password, req.ip || req.socket.remoteAddress || 'local');
+    if (!result.ok) {
+      if (result.retryAfterMs) res.setHeader('Retry-After', String(Math.ceil(result.retryAfterMs / 1000)));
+      return res.status(result.retryAfterMs ? 429 : 401).json({
+        error: result.retryAfterMs
+          ? 'Too many attempts. Please wait briefly and try again.'
+          : 'The email or password is incorrect.',
+        code: result.retryAfterMs ? 'LOGIN_LOCKED' : 'INVALID_CREDENTIALS',
+      });
+    }
+    security.onAuthenticated?.();
+    res.json({ token: result.token, expiresAt: result.expiresAt });
+  });
+
+  app.use('/api', (req, res, next) => {
+    const token = readBearerToken(req.header('authorization'));
+    if (!loginGuard.isAuthorized(token)) {
+      return res.status(401).json({ error: 'Authentication required.', code: 'AUTH_REQUIRED' });
+    }
+    res.locals.authToken = token;
+    next();
+  });
+  app.get('/api/auth/session', (_req, res) => res.json({ authenticated: true }));
+  app.post('/api/auth/logout', (_req, res) => {
+    loginGuard.logout(res.locals.authToken);
+    security.onLoggedOut?.();
+    res.status(204).end();
+  });
   app.get('/api/status', (_req, res) => res.json({ whatsapp: whatsapp.getStatus(), ai: database.getAiSettings() }));
   app.post('/api/whatsapp/connect', asyncRoute(async (_req, res) => res.json(await whatsapp.connect())));
   app.post('/api/whatsapp/disconnect', asyncRoute(async (_req, res) => res.json(await whatsapp.disconnect())));
@@ -62,7 +126,7 @@ export function createPlatinumApp(clientDistPath?: string) {
 
   if (clientDistPath) {
     app.use(express.static(clientDistPath));
-    for (const page of ['connect', 'campaign', 'ai', 'activity']) {
+    for (const page of ['login', 'connect', 'campaign', 'ai', 'activity']) {
       app.get(`/${page}`, (_req, res) => res.sendFile(resolve(clientDistPath, `${page}.html`)));
     }
     app.get('/', (_req, res) => res.sendFile(resolve(clientDistPath, 'index.html')));
@@ -101,14 +165,29 @@ function installMessageHandler() {
 export async function startPlatinumServer(options: PlatinumServerOptions = {}) {
   const host = options.host ?? '127.0.0.1';
   const requestedPort = options.port ?? 0;
-  installMessageHandler();
-  campaignWorker.start();
-  const server = createServer(createPlatinumApp(options.clientDistPath));
+  let protectedServicesStarted = false;
+  const startProtectedServices = () => {
+    if (protectedServicesStarted) return;
+    protectedServicesStarted = true;
+    installMessageHandler();
+    campaignWorker.start();
+    if (options.autoConnectWhatsApp !== false) void whatsapp.connect().catch(() => undefined);
+  };
+  const stopProtectedServices = () => {
+    if (!protectedServicesStarted) return;
+    protectedServicesStarted = false;
+    campaignWorker.stop();
+    whatsapp.shutdown();
+  };
+  const server = createServer(createPlatinumApp(options.clientDistPath, {
+    sameOriginOnly: options.sameOriginOnly,
+    onAuthenticated: startProtectedServices,
+    onLoggedOut: stopProtectedServices,
+  }));
   await new Promise<void>((done, reject) => {
     server.once('error', reject);
     server.listen(requestedPort, host, done);
   });
-  if (options.autoConnectWhatsApp !== false) void whatsapp.connect().catch(() => undefined);
   const address = server.address();
   const actualPort = typeof address === 'object' && address ? address.port : requestedPort;
   return {
@@ -116,8 +195,7 @@ export async function startPlatinumServer(options: PlatinumServerOptions = {}) {
     port: actualPort,
     origin: `http://${host}:${actualPort}`,
     async close() {
-      campaignWorker.stop();
-      whatsapp.shutdown();
+      stopProtectedServices();
       await new Promise<void>((done) => server.close(() => done()));
       database.close();
     },

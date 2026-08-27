@@ -1,7 +1,6 @@
 import { rmSync } from 'node:fs';
 import makeWASocket, {
   Browsers,
-  DisconnectReason,
   fetchLatestBaileysVersion,
   useMultiFileAuthState,
   type WASocket,
@@ -11,6 +10,7 @@ import pino from 'pino';
 import QRCode from 'qrcode';
 import { authDir } from './config.js';
 import type { WhatsAppStatus } from './types.js';
+import { planDisconnect } from './whatsapp-connection.js';
 
 type IncomingHandler = (message: { chatId: string; text: string; externalId?: string }) => Promise<void>;
 
@@ -79,11 +79,13 @@ export class WhatsAppService {
       if (connection === 'close') {
         const error = lastDisconnect?.error as { output?: { statusCode?: number }; message?: string } | undefined;
         const code = error?.output?.statusCode;
+        if (this.socket !== socket) return;
         this.socket = null;
-        this.update({ state: 'disconnected', qrDataUrl: null, lastError: error?.message || (code ? `WhatsApp disconnected (${code})` : 'WhatsApp disconnected') });
-        if (!this.intentionallyLoggedOut && code !== DisconnectReason.loggedOut) {
+        const plan = planDisconnect(code, error?.message, this.intentionallyLoggedOut);
+        this.update({ state: plan.state, qrDataUrl: null, lastError: plan.lastError });
+        if (plan.reconnectAfterMs !== null) {
           if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
-          this.reconnectTimer = setTimeout(() => void this.connect(), 4_000);
+          this.reconnectTimer = setTimeout(() => void this.connect(), plan.reconnectAfterMs);
         }
       }
     });

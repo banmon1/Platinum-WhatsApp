@@ -31,6 +31,7 @@ Platinum WhatsApp/
 
 ## Application routes
 
+- `/login` — authenticate before any protected application capability is available.
 - `/connect` — generate/scan QR, view session status, disconnect safely.
 - `/campaign` — enter opted-in numbers and one message, Run/Stop/Resume.
 - `/ai` — save the API key, model, prompt, and enable automatic replies.
@@ -40,13 +41,17 @@ The Windows build has no server-address screen. It starts a private loopback ser
 
 ## Windows installer
 
-The ready installer is generated at `apps/desktop/release/Platinum-WhatsApp-Setup-1.0.1.exe`.
+The ready installer is generated at `apps/desktop/release/Platinum-WhatsApp-Setup-1.0.3.exe`.
 
 ```powershell
 npm run build:windows
 ```
 
-The installer creates the Start menu and desktop shortcuts. The installed application uses the custom rounded icon, shows the pulsing acid-yellow splash, and uses the in-app minimize, maximize, and close buttons. Persistent WhatsApp credentials, the encrypted OpenAI key, campaigns, and activity are stored under the current Windows user's application-data folder.
+The installer creates the Start menu and desktop shortcuts. The installed application uses the custom rounded icon, shows the pulsing acid-yellow splash, and uses the in-app minimize, maximize, and close buttons. Every application launch starts signed out; successful server-side authentication issues one process-local session that protects every functional API route. Persistent WhatsApp credentials, the encrypted OpenAI key, campaigns, and activity are stored under the current Windows user's application-data folder.
+
+The Windows installer always uses its dedicated per-user folder under `%LOCALAPPDATA%\Programs`, does not offer an installation-directory picker, rejects unsafe registered uninstall paths, and preserves the separate application-data folder during uninstall.
+
+The production package keeps the client and server inside `app.asar`, removes source maps, declarations, and tests, obfuscates application-owned JavaScript, validates ASAR integrity, and disables Electron's Node/inspection escape hatches. These controls materially raise the reverse-engineering effort, but no offline desktop application can make code extraction or binary patching mathematically impossible.
 
 ## Start locally
 
@@ -61,10 +66,11 @@ This development command exposes the API on `http://localhost:8787`; that addres
 
 ## First use
 
-1. Open Connect and generate the QR.
-2. In WhatsApp on the dedicated business phone, open **Settings → Linked Devices → Link a Device** and scan it.
-3. Open Campaign, add only customers who opted in, write the message, confirm permission, and Run.
-4. Open AI Replies, enter an OpenAI API key and a detailed prompt, then enable and save.
+1. Sign in with the approved Platinum WhatsApp credentials.
+2. Open Connect and generate the QR.
+3. In WhatsApp on the dedicated business phone, open **Settings → Linked Devices → Link a Device** and scan it.
+4. Open Campaign, add only customers who opted in, write the message, confirm permission, and Run.
+5. Open AI Replies, enter an OpenAI API key and a detailed prompt, then enable and save.
 
 The API key is encrypted before it reaches SQLite and is never returned to the client. If `APP_SECRET` is not set, the server generates `apps/server/data/nabilo-secret.key`; back up this file together with the database.
 
@@ -77,7 +83,7 @@ npm run android -w @platinum/client
 npm run ios -w @platinum/client
 ```
 
-`npm run check` type-checks both apps, runs server tests, compiles the backend, and exports every web route. iOS native compilation requires macOS or EAS Build. `apps/client/eas.json` contains development, preview, and production profiles.
+`npm run check` type-checks both apps, runs server and client contract tests, compiles the backend, and exports every web route. `npm run verify:hardening -w @platinum/desktop` then validates the staged protected runtime. iOS native compilation requires macOS or EAS Build. `apps/client/eas.json` contains development, preview, and production profiles.
 
 ## Operating notes
 

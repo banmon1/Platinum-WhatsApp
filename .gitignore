@@ -8,6 +8,7 @@ apps/server/data/
 apps/client/.expo/
 apps/desktop/nabilo-runtime/
 apps/desktop/.nabilo-runtime/
+apps/desktop/nabilo-protected/
 apps/desktop/release/
 output/
 /.playwright-cli/

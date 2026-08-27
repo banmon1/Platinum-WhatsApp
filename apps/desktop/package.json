@@ -1,13 +1,15 @@
 {
   "name": "@platinum/desktop",
-  "version": "1.0.1",
+  "version": "1.0.5",
   "private": true,
   "type": "module",
-  "main": "src/main.mjs",
+  "main": "nabilo-protected/main.mjs",
   "scripts": {
     "prepare:runtime": "npm run build -w @platinum/server && npm run export:web -w @platinum/client && node scripts/nabilo-prepare-runtime.mjs && node scripts/nabilo-build-icon.mjs",
+    "verify:hardening": "node scripts/nabilo-verify-hardening.mjs",
+    "verify:installer-safety": "node scripts/nabilo-verify-installer-safety.mjs",
     "start": "npm run prepare:runtime && electron .",
-    "dist:win": "npm run prepare:runtime && electron-builder --win nsis --x64"
+    "dist:win": "npm run verify:installer-safety && npm run prepare:runtime && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "^7.0.0-rc.13",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "electron": "43.4.1",
     "electron-builder": "26.15.3",
+    "javascript-obfuscator": "5.6.0",
     "png-to-ico": "3.0.2"
   },
   "build": {
@@ -29,19 +32,32 @@
     "productName": "Platinum WhatsApp",
     "artifactName": "Platinum-WhatsApp-Setup-${version}.${ext}",
     "directories": {
-      "output": "release"
+      "output": "release",
+      "buildResources": "build"
+    },
+    "asar": true,
+    "compression": "maximum",
+    "electronFuses": {
+      "runAsNode": false,
+      "enableCookieEncryption": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": true
     },
     "files": [
-      "src/**/*",
+      "nabilo-protected/**/*",
       "assets/**/*",
-      "nabilo-runtime/server/**/*",
+      "nabilo-runtime/**/*",
+      "!**/*.map",
+      "!**/*.d.ts",
+      "!**/*.d.cts",
+      "!**/*.d.mts",
+      "!**/{test,tests,__tests__}{,/**/*}",
+      "!**/*.test.*",
+      "!**/*.spec.*",
       "package.json"
-    ],
-    "extraResources": [
-      {
-        "from": "nabilo-runtime/client",
-        "to": "client"
-      }
     ],
     "win": {
       "icon": "assets/platinum.ico",
@@ -54,7 +70,9 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
+      "allowElevation": false,
+      "allowToChangeInstallationDirectory": false,
+      "include": "build/installer.nsh",
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Platinum WhatsApp",

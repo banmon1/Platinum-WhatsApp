@@ -1,0 +1,86 @@
+/* Web and Electron-only polish. Native platforms ignore this stylesheet. */
+[data-testid="window-drag-region"] {
+  -webkit-app-region: drag;
+  cursor: default;
+  user-select: none;
+}
+
+[data-testid="window-drag-region"] [role="button"],
+[data-testid="window-controls"] {
+  -webkit-app-region: no-drag;
+  pointer-events: auto;
+}
+
+textarea[data-testid="campaign-numbers"],
+textarea[data-testid="campaign-message"] {
+  overflow-y: auto !important;
+  outline: none;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: #e9f52f transparent;
+}
+
+.window-controls {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 40px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #d2d3cd;
+}
+
+.window-control {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: #f6f6f0;
+  cursor: pointer;
+  transition: transform 120ms ease, background-color 120ms ease;
+}
+
+.window-control:hover { background: #e9f52f; transform: translateY(-1px); }
+.window-control:active { transform: scale(.94); }
+.window-control:focus-visible { outline: 2px solid #e9f52f; outline-offset: 2px; }
+.window-control-close { background: #f3ef68; }
+.window-control-close:hover { background: #ff7a72; }
+
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar {
+  width: 8px;
+}
+
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar-track,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar-track {
+  margin-block: 14px;
+  background: transparent;
+}
+
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar-thumb,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar-thumb {
+  min-height: 34px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #e9f52f;
+  background-clip: content-box;
+}
+
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar-thumb:hover,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar-thumb:hover {
+  background: #cbd829;
+  background-clip: content-box;
+}
+
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar-button,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar-button,
+textarea[data-testid="campaign-numbers"]::-webkit-scrollbar-corner,
+textarea[data-testid="campaign-message"]::-webkit-scrollbar-corner {
+  display: none;
+  width: 0;
+  height: 0;
+  background: transparent;
+}

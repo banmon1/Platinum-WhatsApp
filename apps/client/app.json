@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Platinum WhatsApp",
+    "slug": "platinum-whatsapp",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/platinum-icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "platinum-whatsapp",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.platinum.whatsappstudio"
+    },
+    "android": {
+      "package": "com.platinum.whatsappstudio",
+      "adaptiveIcon": {
+        "backgroundColor": "#F3FF3B",
+        "foregroundImage": "./assets/platinum-icon.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/platinum-icon.png",
+      "bundler": "metro",
+      "output": "static"
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
