@@ -1,7 +1,50 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 const { ApiClient, ApiError } = require('../src/api.ts');
+const { loadWebApiUrl, resolveApiUrl, saveWebApiUrl } = require('../src/apiOrigin.ts');
 const { connectionErrorNotice, connectionTransitionNotice } = require('../src/connectionNotice.ts');
+
+test('desktop uses its current private server origin without changing web or Android defaults', () => {
+  const desktopRuntime=(origin,stored='http://localhost:8787')=>({
+    location:{origin},
+    localStorage:{getItem:()=>stored,setItem:()=>assert.fail('Desktop must not persist a server override.')},
+    platinumDesktop:{isDesktop:true},
+  });
+  assert.equal(
+    loadWebApiUrl('platinum.apiUrl',desktopRuntime('http://127.0.0.1:63703')),
+    'http://127.0.0.1:63703',
+  );
+  assert.equal(resolveApiUrl('web', null, null), 'http://localhost:8787');
+  assert.equal(resolveApiUrl('web', 'https://api.example.test/', null), 'https://api.example.test');
+  assert.equal(resolveApiUrl('android', null, null), 'http://10.0.2.2:8787');
+  assert.equal(loadWebApiUrl('platinum.apiUrl',desktopRuntime('https://example.test')), 'http://localhost:8787');
+  assert.equal(loadWebApiUrl('platinum.apiUrl',desktopRuntime('file:///C:/Platinum/index.html',null)), 'http://localhost:8787');
+  assert.equal(loadWebApiUrl('platinum.apiUrl',desktopRuntime('http://127.0.0.1:63704',null)), 'http://127.0.0.1:63704');
+  assert.equal(saveWebApiUrl('platinum.apiUrl','https://api.example.test',desktopRuntime('http://127.0.0.1:63703')), 'http://127.0.0.1:63703');
+
+  const writes=[];
+  const webRuntime={localStorage:{getItem:()=>null,setItem:(key,value)=>writes.push([key,value])}};
+  assert.equal(saveWebApiUrl('platinum.apiUrl','https://api.example.test/',webRuntime),'https://api.example.test');
+  assert.deepEqual(writes,[['platinum.apiUrl','https://api.example.test']]);
+});
+
+test('desktop login posts to the active private origin', async (context) => {
+  const originalFetch=globalThis.fetch;
+  const requests=[];
+  context.after(()=>{globalThis.fetch=originalFetch;});
+  globalThis.fetch=async(input,init)=>{
+    requests.push({url:String(input),init});
+    return Response.json({token:'nabilo-desktop-session'});
+  };
+
+  const desktopUrl=loadWebApiUrl('platinum.apiUrl',{
+    location:{origin:'http://127.0.0.1:63703'},
+    localStorage:{getItem:()=> 'http://localhost:8787',setItem:()=>{}},
+    platinumDesktop:{isDesktop:true},
+  });
+  await new ApiClient(desktopUrl).login('owner@example.com','nabilo-test-password');
+  assert.equal(requests[0]?.url,'http://127.0.0.1:63703/api/auth/login');
+});
 
 test('login sends credentials only to the auth route and bearer token protects later requests', async (context) => {
   const originalFetch=globalThis.fetch;

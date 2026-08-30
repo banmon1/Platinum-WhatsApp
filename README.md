@@ -41,7 +41,7 @@ The Windows build has no server-address screen. It starts a private loopback ser
 
 ## Windows installer
 
-The ready installer is generated at `apps/desktop/release/Platinum-WhatsApp-Setup-1.0.3.exe`.
+The ready installer is generated at `apps/desktop/release/Platinum-WhatsApp-Setup-1.0.6.exe`.
 
 ```powershell
 npm run build:windows

@@ -1,20 +1,26 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import { loadWebApiUrl, resolveApiUrl, saveWebApiUrl } from './apiOrigin';
 
 const API_KEY = 'platinum.apiUrl';
 const AUTH_TOKEN_KEY = 'platinum.authToken';
 let nativeAuthToken: string | null = null;
-export const defaultApiUrl = Platform.OS === 'android' ? 'http://10.0.2.2:8787' : 'http://localhost:8787';
+
+function webRuntime() {
+  return typeof window === 'undefined' ? undefined : window;
+}
+
+export const defaultApiUrl = resolveApiUrl(Platform.OS, null, webRuntime());
 
 export async function loadApiUrl() {
-  if (Platform.OS === 'web') return globalThis.localStorage?.getItem(API_KEY) || defaultApiUrl;
-  return (await SecureStore.getItemAsync(API_KEY)) || defaultApiUrl;
+  if (Platform.OS === 'web') return loadWebApiUrl(API_KEY, webRuntime());
+  return resolveApiUrl(Platform.OS, await SecureStore.getItemAsync(API_KEY));
 }
 
 export async function saveApiUrl(value: string) {
+  if (Platform.OS === 'web') return saveWebApiUrl(API_KEY, value, webRuntime());
   const clean = value.trim().replace(/\/$/, '');
-  if (Platform.OS === 'web') globalThis.localStorage?.setItem(API_KEY, clean);
-  else await SecureStore.setItemAsync(API_KEY, clean);
+  await SecureStore.setItemAsync(API_KEY, clean);
   return clean;
 }
 
