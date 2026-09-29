@@ -35,3 +35,5 @@ output/
 /resources/
 *.log
 .DS_Store
+
+.nabilo/

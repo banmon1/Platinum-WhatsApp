@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Image, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Image, StyleSheet,  useWindowDimensions, View } from 'react-native';
+import { Text } from '@/i18n';
 import { AlertCircle, Check, CircleCheck, Link2, LogOut, QrCode, ShieldCheck, Smartphone } from 'lucide-react-native';
 import { AppShell } from '@/components/AppShell';
 import { ActionButton, Eyebrow, PageHeader, SectionCard, StatusBadge } from '@/components/UI';
@@ -33,7 +34,7 @@ export default function ConnectPage(){
       <SectionCard style={styles.qrCard}>
         <View style={styles.cardHead}><View><Eyebrow>Secure pairing</Eyebrow><Text style={styles.cardTitle}>{whatsapp.state==='connected'?'Device connected':whatsapp.state==='qr'?'Scan this QR code':'Connect your device'}</Text></View><View style={styles.roundIcon}>{whatsapp.state==='connected'?<Check size={26} color={colors.ink}/>:<QrCode size={26} color={colors.ink}/>}</View></View>
         <View style={styles.qrStage}>
-          {whatsapp.qrDataUrl?<Image source={{uri:whatsapp.qrDataUrl}} style={styles.qr}/>:whatsapp.state==='connected'?<View style={styles.connectedVisual}><View style={styles.phoneRing}><Smartphone size={50} color={colors.ink}/><View style={styles.check}><Check size={16} color={colors.ink}/></View></View><Text style={styles.connectedName}>{whatsapp.profileName||'WhatsApp account'}</Text><Text style={styles.phone}>{whatsapp.phone?`+${whatsapp.phone}`:'Linked device'}</Text></View>:<View style={styles.emptyVisual}><QrCode size={70} color={colors.line}/><Text style={styles.emptyTitle}>No active QR</Text><Text style={styles.emptyText}>Start pairing to generate a fresh code.</Text></View>}
+          {whatsapp.qrDataUrl?<Image source={{uri:whatsapp.qrDataUrl}} style={styles.qr}/>:whatsapp.state==='connected'?<View style={styles.connectedVisual}><View style={styles.phoneRing}><Smartphone size={50} color={colors.ink}/><View style={styles.check}><Check size={16} color={colors.ink}/></View></View><Text localize={!whatsapp.profileName} style={styles.connectedName}>{whatsapp.profileName||'WhatsApp account'}</Text><Text style={styles.phone}>{whatsapp.phone?`+${whatsapp.phone}`:'Linked device'}</Text></View>:<View style={styles.emptyVisual}><QrCode size={70} color={colors.line}/><Text style={styles.emptyTitle}>No active QR</Text><Text style={styles.emptyText}>Start pairing to generate a fresh code.</Text></View>}
         </View>
         {visibleNotice?<View accessibilityLiveRegion="polite" style={[styles.notice,visibleNotice.tone==='success'?styles.noticeSuccess:styles.noticeDanger]}>{visibleNotice.tone==='success'?<CircleCheck size={17} color={colors.success}/>:<AlertCircle size={17} color="#8F332C"/>}<Text style={[styles.noticeText,visibleNotice.tone==='success'?styles.noticeTextSuccess:styles.noticeTextDanger]}>{visibleNotice.message}</Text></View>:null}
         <View style={styles.actions}>{whatsapp.state==='connected'?<ActionButton label="Disconnect device" variant="light" onPress={disconnect} loading={busy} icon={<LogOut size={18} color={colors.ink}/>}/>:<ActionButton label={whatsapp.state==='qr'?'Refresh connection':'Generate QR code'} onPress={connect} loading={busy} disabled={!online} icon={<Link2 size={18} color={colors.white}/>}/>}</View>

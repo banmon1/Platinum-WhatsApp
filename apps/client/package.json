@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/manrope": "^0.4.2",
+    "@expo-google-fonts/tajawal": "^0.4.1",
     "@expo/metro-runtime": "~57.0.12",
     "expo": "~57.0.15",
     "expo-clipboard": "~57.0.1",
@@ -14,6 +15,7 @@
     "expo-router": "~57.0.15",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
+    "libphonenumber-js": "^1.13.14",
     "lucide-react-native": "^1.33.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",

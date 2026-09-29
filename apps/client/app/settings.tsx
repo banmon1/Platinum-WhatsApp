@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, StyleSheet,   View } from 'react-native';
+import { TextInput, Text } from '@/i18n';
 import { Check, Globe2, Save, Server, Smartphone } from 'lucide-react-native';
 import { AppShell } from '@/components/AppShell';
 import { ActionButton, Eyebrow, PageHeader, SectionCard, StatusBadge } from '@/components/UI';

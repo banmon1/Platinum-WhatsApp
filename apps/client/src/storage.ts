@@ -4,7 +4,7 @@ import { loadWebApiUrl, resolveApiUrl, saveWebApiUrl } from './apiOrigin';
 
 const API_KEY = 'platinum.apiUrl';
 const AUTH_TOKEN_KEY = 'platinum.authToken';
-let nativeAuthToken: string | null = null;
+
 
 function webRuntime() {
   return typeof window === 'undefined' ? undefined : window;
@@ -25,16 +25,19 @@ export async function saveApiUrl(value: string) {
 }
 
 export async function loadAuthToken() {
-  if (Platform.OS === 'web') return globalThis.sessionStorage?.getItem(AUTH_TOKEN_KEY) || null;
-  return nativeAuthToken;
+  if (webRuntime()?.platinumDesktop) return webRuntime()!.platinumDesktop!.loadSession();
+  if (Platform.OS === 'web') return globalThis.localStorage?.getItem(AUTH_TOKEN_KEY) || null;
+  return SecureStore.getItemAsync(AUTH_TOKEN_KEY);
 }
 
 export async function saveAuthToken(token: string) {
-  if (Platform.OS === 'web') globalThis.sessionStorage?.setItem(AUTH_TOKEN_KEY, token);
-  else nativeAuthToken = token;
+  if (webRuntime()?.platinumDesktop) return webRuntime()!.platinumDesktop!.saveSession(token);
+  if (Platform.OS === 'web') globalThis.localStorage?.setItem(AUTH_TOKEN_KEY, token);
+  else await SecureStore.setItemAsync(AUTH_TOKEN_KEY, token);
 }
 
 export async function clearAuthToken() {
-  if (Platform.OS === 'web') globalThis.sessionStorage?.removeItem(AUTH_TOKEN_KEY);
-  else nativeAuthToken = null;
+  if (webRuntime()?.platinumDesktop) return webRuntime()!.platinumDesktop!.clearSession();
+  if (Platform.OS === 'web') globalThis.localStorage?.removeItem(AUTH_TOKEN_KEY);
+  else await SecureStore.deleteItemAsync(AUTH_TOKEN_KEY);
 }

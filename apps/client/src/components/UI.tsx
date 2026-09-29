@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet,  View, type ViewStyle } from 'react-native';
+import { Text } from '@/i18n';
 import { colors, radii } from '../theme';
 
 export function SectionCard({children,style}:{children:ReactNode;style?:ViewStyle|ViewStyle[]}) {

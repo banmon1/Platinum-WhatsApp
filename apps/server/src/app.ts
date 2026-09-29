@@ -82,6 +82,7 @@ export function createPlatinumApp(clientDistPath?: string, security: PlatinumApp
       return res.status(401).json({ error: 'Authentication required.', code: 'AUTH_REQUIRED' });
     }
     res.locals.authToken = token;
+    security.onAuthenticated?.();
     next();
   });
   app.get('/api/auth/session', (_req, res) => res.json({ authenticated: true }));
@@ -148,13 +149,12 @@ function installMessageHandler() {
   messageHandlerInstalled = true;
   whatsapp.setIncomingHandler(async ({ chatId, text, externalId }) => {
     if (!database.rememberMessage(chatId, 'in', text, externalId)) return;
-    database.addEvent('inbound', 'Customer message received', chatId.split('@')[0], 'received');
     try {
       const reply = await aiResponder.generateReply(chatId);
       if (!reply) return;
       const messageId = await whatsapp.sendText(chatId, reply);
       database.rememberMessage(chatId, 'out', reply, messageId);
-      database.addEvent('ai', 'AI reply sent', chatId.split('@')[0], 'sent');
+      database.addEvent('ai', 'AI reply sent', '', 'sent');
     } catch (error) {
       const detail = error instanceof Error ? error.message : String(error);
       database.addEvent('ai', 'AI reply failed', detail, 'failed');

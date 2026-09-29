@@ -3,6 +3,23 @@ const test = require('node:test');
 const { ApiClient, ApiError } = require('../src/api.ts');
 const { loadWebApiUrl, resolveApiUrl, saveWebApiUrl } = require('../src/apiOrigin.ts');
 const { connectionErrorNotice, connectionTransitionNotice } = require('../src/connectionNotice.ts');
+const { visibleActivityDetail, visibleActivityEvents } = require('../src/activityDetail.ts');
+
+test('internal WhatsApp chat identifiers stay hidden from activity', () => {
+  assert.equal(visibleActivityDetail({type:'inbound',status:'received',detail:'40566083567631'}), null);
+  assert.equal(visibleActivityDetail({type:'ai',status:'sent',detail:'216522890936376'}), null);
+  assert.equal(visibleActivityDetail({type:'ai',status:'failed',detail:'AI provider unavailable'}), 'AI provider unavailable');
+  assert.equal(visibleActivityDetail({type:'message',status:'sent',detail:'+962791111111'}), '+962791111111');
+});
+
+test('incoming-message events are omitted from the activity timeline', () => {
+  const events = [
+    {type:'inbound',status:'received',detail:'40566083567631',id:'incoming'},
+    {type:'message',status:'sent',detail:'+962791111111',id:'sent'},
+    {type:'campaign',status:'running',detail:'2 recipients',id:'campaign'},
+  ];
+  assert.deepEqual(visibleActivityEvents(events).map((event) => event.id), ['sent', 'campaign']);
+});
 
 test('desktop uses its current private server origin without changing web or Android defaults', () => {
   const desktopRuntime=(origin,stored='http://localhost:8787')=>({

@@ -12,7 +12,7 @@
     "build": "npm run build -w @platinum/server && npm run export:web -w @platinum/client",
     "typecheck": "npm run typecheck -w @platinum/server && npm run typecheck -w @platinum/client",
     "test": "npm run test -w @platinum/server && npm run test -w @platinum/client",
-    "check": "npm run typecheck && npm run test && npm run build && npm run verify:installer-safety -w @platinum/desktop"
+    "check": "npm run typecheck && npm run test && npm run build && npm run verify:installer-safety -w @platinum/desktop && npm run verify:window-controls -w @platinum/desktop && npm run verify:hardening -w @platinum/desktop"
   },
   "devDependencies": {"concurrently": "^9.2.1"}
 }

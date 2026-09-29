@@ -1,4 +1,7 @@
-import { ActivityIndicator, Image, Platform, StyleSheet, Text, View } from 'react-native';
+import { Tajawal_400Regular, Tajawal_700Bold } from '@expo-google-fonts/tajawal';
+import { LanguageProvider } from '@/i18n';
+import { ActivityIndicator, Image, Platform, StyleSheet,  View } from 'react-native';
+import { Text } from '@/i18n';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts, Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from '@expo-google-fonts/manrope';
@@ -40,9 +43,9 @@ function AppRoutes() {
 }
 
 export default function RootLayout() {
-  const [loaded]=useFonts({Manrope_400Regular,Manrope_500Medium,Manrope_600SemiBold,Manrope_700Bold});
+  const [loaded]=useFonts({Tajawal_400Regular,Tajawal_700Bold,Manrope_400Regular,Manrope_500Medium,Manrope_600SemiBold,Manrope_700Bold});
   if(!loaded) return null;
-  return <SafeAreaProvider><AppProvider><StatusBar style="light"/><AppRoutes/></AppProvider></SafeAreaProvider>;
+  return <SafeAreaProvider><LanguageProvider><AppProvider><StatusBar style="light"/><AppRoutes/></AppProvider></LanguageProvider></SafeAreaProvider>;
 }
 
 const styles=StyleSheet.create({

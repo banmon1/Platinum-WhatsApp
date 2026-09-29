@@ -6,9 +6,26 @@
 }
 
 [data-testid="window-drag-region"] [role="button"],
+[data-testid="window-drag-region"] [data-testid="window-no-drag"],
+[data-testid="window-drag-region"] [data-testid="window-no-drag"] *,
 [data-testid="window-controls"] {
   -webkit-app-region: no-drag;
   pointer-events: auto;
+}
+
+[data-testid="top-brand-button"],
+[data-testid="top-nav-button"],
+[data-testid="top-logout-button"] {
+  cursor: pointer;
+}
+
+[data-testid="top-nav-button"] {
+  transition: background-color 120ms ease, transform 120ms ease;
+}
+
+[data-testid="top-nav-button"]:hover {
+  background-color: #e9f52f !important;
+  transform: translateY(-1px);
 }
 
 textarea[data-testid="campaign-numbers"],

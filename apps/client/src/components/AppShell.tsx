@@ -1,5 +1,7 @@
+import { LanguageSwitch } from '../i18n';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet,  useWindowDimensions, View } from 'react-native';
+import { Text } from '@/i18n';
 import { usePathname, useRouter, type Href } from 'expo-router';
 import { Activity, Bot, Link2, LogOut, Megaphone, Sparkles } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,11 +22,11 @@ export function AppShell({children}:{children:ReactNode}) {
   };
   return <SafeAreaView style={styles.safe}><View style={styles.acidBackdrop}/><View style={[styles.shell,compact&&styles.shellCompact]}>
     <View testID={Platform.OS==='web'&&window?.platinumDesktop?.isDesktop?'window-drag-region':undefined} style={[styles.topbar,compact&&styles.topbarCompact]}>
-      <Pressable onPress={()=>navigate('/connect',true)} style={styles.brand}><View style={styles.brandMark}><Sparkles size={18} color={colors.ink}/></View><View><Text style={styles.brandName}>Platinum</Text><Text style={styles.brandSub}>WHATSAPP STUDIO</Text></View></Pressable>
-      {!compact&&<View style={styles.nav}>{items.map(({href,label,icon:Icon})=>{const active=path===href;return <Pressable key={href} onPress={()=>navigate(href)} style={[styles.navItem,active&&styles.navActive]}><Icon size={16} color={colors.ink}/><Text style={styles.navText}>{label}</Text></Pressable>})}</View>}
+      <Pressable accessibilityLabel="Connect home" accessibilityRole="button" testID="top-brand-button" onPress={()=>navigate('/connect',true)} style={styles.brand}><View style={styles.brandMark}><Sparkles size={18} color={colors.ink}/></View><View><Text style={styles.brandName}>Platinum</Text><Text style={styles.brandSub}>WHATSAPP STUDIO</Text></View></Pressable>
+      {!compact&&<View testID="window-no-drag" style={styles.nav}>{items.map(({href,label,icon:Icon})=>{const active=path===href;return <Pressable accessibilityLabel={label} accessibilityRole="button" testID="top-nav-button" key={href} onPress={()=>navigate(href)} style={[styles.navItem,active&&styles.navActive]}><Icon size={16} color={colors.ink}/><Text style={styles.navText}>{label}</Text></Pressable>})}</View>}
       <View style={styles.live}><View style={[styles.liveDot,{backgroundColor:online&&whatsapp.state==='connected'?colors.acid:online?'#F0C55B':colors.danger}]}/><Text style={styles.liveText}>{!online?'API offline':whatsapp.state==='connected'?'Live':'Ready'}</Text></View>
-      <Pressable accessibilityLabel="Sign out" accessibilityRole="button" onPress={()=>void logout()} style={({pressed})=>[styles.logout,pressed&&styles.logoutPressed]}><LogOut size={17} color={colors.ink}/></Pressable>
-      <WindowControls/>
+      <Pressable accessibilityLabel="Sign out" accessibilityRole="button" testID="top-logout-button" onPress={()=>void logout()} style={({pressed})=>[styles.logout,pressed&&styles.logoutPressed]}><LogOut size={17} color={colors.ink}/></Pressable>
+      <LanguageSwitch/><WindowControls/>
     </View>
     <ScrollView contentContainerStyle={[styles.content,compact&&styles.contentCompact]} showsVerticalScrollIndicator={false}>{children}</ScrollView>
     {compact&&<View style={styles.bottomNav}>{items.map(({href,label,icon:Icon})=>{const active=path===href;return <Pressable accessibilityLabel={label} key={href} onPress={()=>navigate(href)} style={[styles.bottomItem,active&&styles.bottomActive]}><Icon size={20} color={active?colors.ink:colors.muted}/><Text numberOfLines={1} style={[styles.bottomLabel,active&&styles.bottomLabelActive]}>{label}</Text></Pressable>})}</View>}

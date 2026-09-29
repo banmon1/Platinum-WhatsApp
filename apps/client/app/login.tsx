@@ -6,16 +6,21 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
-  TextInput,
+
+
   useWindowDimensions,
   View,
 } from 'react-native';
+import { TextInput, Text } from '@/i18n';
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WindowControls } from '@/components/WindowControls';
 import { useApp } from '@/context/AppContext';
 import { colors, radii } from '@/theme';
+
+import { LanguageSwitch } from '@/i18n';
+import { openContact } from '@/contact';
+import type { TextInput as NativeTextInput } from 'react-native';
 
 const logo = require('../assets/platinum-icon.png');
 
@@ -29,7 +34,7 @@ export default function LoginPage() {
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState<string|null>(null);
   const submittingRef=useRef(false);
-  const passwordInputRef=useRef<TextInput>(null);
+  const passwordInputRef=useRef<NativeTextInput>(null);
   const desktop=Platform.OS==='web'&&typeof window!=='undefined'&&Boolean(window.platinumDesktop?.isDesktop);
 
   const submit=async()=>{
@@ -45,7 +50,7 @@ export default function LoginPage() {
   return <SafeAreaView style={styles.safe}>
     <View testID={desktop?'window-drag-region':undefined} style={styles.topbar}>
       <View style={styles.topBrand}><Image source={logo} style={styles.topLogo}/><View><Text style={styles.topName}>Platinum</Text><Text style={styles.topSub}>WHATSAPP STUDIO</Text></View></View>
-      <WindowControls/>
+      <View style={{flexDirection:'row',gap:12,alignItems:'center'}}><LanguageSwitch/><WindowControls/></View>
     </View>
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS==='ios'?'padding':undefined}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
@@ -112,7 +117,9 @@ export default function LoginPage() {
             <Pressable accessibilityRole="button" disabled={busy} onPress={()=>void submit()} style={({pressed})=>[styles.submit,busy&&styles.submitDisabled,pressed&&styles.submitPressed]}>
               <Text style={styles.submitText}>{busy?'Signing in…':'Sign in securely'}</Text><ArrowRight size={19} color={colors.white}/>
             </Pressable>
-            <View style={styles.privacy}><ShieldCheck size={14} color={colors.success}/><Text style={styles.privacyText}>Credentials are never stored. The session ends when you close the app.</Text></View>
+            <Pressable accessibilityRole="button" onPress={()=>void openContact().catch(()=>setError('Unable to open WhatsApp. Please try again.'))} style={[styles.submit,{backgroundColor:colors.acid,marginTop:12}]}><Text style={{fontSize:13,fontWeight:'700',color:colors.ink}}>Contact on WhatsApp · Get access</Text></Pressable>
+            <Text style={[styles.subtitle,{marginTop:10,marginBottom:0}]}>No login details? Contact us on WhatsApp to get your access code and sign-in details.</Text>
+            <View style={styles.privacy}><ShieldCheck size={14} color={colors.success}/><Text style={styles.privacyText}>Your session is remembered securely. Sign out on shared computers.</Text></View>
           </View>
         </View>
       </ScrollView>

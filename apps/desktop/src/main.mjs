@@ -1,7 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, session } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, safeStorage, shell } from 'electron';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, rm, rename } from 'node:fs/promises';
 
 // Electron's ESM loader can expose an encoded app path (for example `%20` for
 // the space in "Platinum WhatsApp"). Convert the module URL back to a native
@@ -20,8 +20,7 @@ const desktopChromeCss = `
     cursor: default !important;
   }
 
-  [data-testid="window-drag-region"],
-  [data-testid="window-controls"] {
+  [data-testid="window-drag-region"] {
     -webkit-app-region: drag !important;
     cursor: default !important;
     user-select: none;
@@ -37,8 +36,12 @@ const desktopChromeCss = `
     [role="link"],
     [contenteditable="true"]
   ),
-  [data-testid="window-controls"] button {
+  [data-testid="window-drag-region"] [data-testid="window-no-drag"],
+  [data-testid="window-drag-region"] [data-testid="window-no-drag"] *,
+  [data-testid="window-controls"],
+  [data-testid="window-controls"] * {
     -webkit-app-region: no-drag !important;
+    pointer-events: auto !important;
   }
 `;
 let mainWindow = null;
@@ -108,6 +111,31 @@ function isTrustedMainFrame(event) {
 }
 
 function registerWindowControls() {
+  const sessionFile = () => path.join(app.getPath('userData'), 'nabilo-session.bin');
+  ipcMain.handle('session:load', async (event) => {
+    if (!isTrustedMainFrame(event) || !safeStorage.isEncryptionAvailable()) return null;
+    try { return safeStorage.decryptString(await readFile(sessionFile())); } catch { return null; }
+  });
+  ipcMain.handle('session:save', async (event, token) => {
+    if (!isTrustedMainFrame(event) || typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(token)) throw new Error('Invalid session');
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Windows secure storage is unavailable.');
+    await writeFile(sessionFile() + '.tmp', safeStorage.encryptString(token));
+    await rename(sessionFile() + '.tmp', sessionFile());
+  });
+  ipcMain.handle('session:clear', async (event) => {
+    if (isTrustedMainFrame(event)) await rm(sessionFile(), {force:true});
+  });
+  const languageFile = () => path.join(app.getPath('userData'), 'nabilo-language.txt');
+  ipcMain.handle('language:load', async (event) => {
+    if (!isTrustedMainFrame(event)) return 'en';
+    try { return (await readFile(languageFile(), 'utf8')) === 'ar' ? 'ar' : 'en'; } catch { return 'en'; }
+  });
+  ipcMain.handle('language:save', async (event, language) => {
+    if (isTrustedMainFrame(event) && ['ar','en'].includes(language)) await writeFile(languageFile(), language);
+  });
+  ipcMain.handle('contact:open', async (event) => {
+    if (isTrustedMainFrame(event)) await shell.openExternal('https://wa.me/message/2JDP6KDMBVM6N1');
+  });
   ipcMain.handle('window:minimize', (event) => {
     if (!isTrustedMainFrame(event)) return false;
     mainWindow.minimize();
@@ -189,9 +217,9 @@ async function waitForClientApi() {
 
 async function runWindowControlTest() {
   if (!mainWindow || !controlTestPath) return;
-  const clickControl = async (label) => {
+  const clickSelector = async (selector) => {
     const point = await mainWindow.webContents.executeJavaScript(`(() => {
-      const rect = document.querySelector('[aria-label="${label}"]')?.getBoundingClientRect();
+      const rect = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect();
       return rect ? { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) } : null;
     })()`);
     if (!point) return false;
@@ -200,7 +228,7 @@ async function runWindowControlTest() {
     mainWindow.webContents.sendInputEvent({ type: 'mouseUp', x: point.x, y: point.y, button: 'left', clickCount: 1 });
     return true;
   };
-  const renderer = await mainWindow.webContents.executeJavaScript(`(() => {
+  const initialRenderer = await mainWindow.webContents.executeJavaScript(`(() => {
     const drag = document.querySelector('[data-testid="window-drag-region"]');
     const controls = document.querySelector('[data-testid="window-controls"]');
     const minimize = document.querySelector('[aria-label="Minimize window"]');
@@ -219,6 +247,18 @@ async function runWindowControlTest() {
         const rect = element.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0 && rect.top < 22 && rect.bottom > 0;
       });
+    const visibleActionable = [...document.querySelectorAll('button, a, input, textarea, select, [role="button"], [role="link"]')]
+      .filter((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+    const blockedActionable = visibleActionable.filter((element) => {
+      const rect = element.getBoundingClientRect();
+      const target = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+      return getComputedStyle(element).pointerEvents === 'none'
+        || !target
+        || !(element === target || element.contains(target) || target.contains(element));
+    });
     return {
       bridge: typeof window.platinumDesktop,
       topStripeRegion: region(document.body, '::before'),
@@ -238,22 +278,75 @@ async function runWindowControlTest() {
       topStripeActionableOverlapCount: actionable.length,
       topStripeUnprotectedActionableOverlapCount: actionable.filter((element) => region(element) !== 'no-drag').length,
       buttonsFound: Boolean(minimize && maximize && close),
+      visibleActionableCount: visibleActionable.length,
+      blockedActionableCount: blockedActionable.length,
     };
   })()`);
-  await clickControl('Minimize window');
+  await clickSelector('[aria-label="Show password"]');
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const passwordToggleWorked = await mainWindow.webContents.executeJavaScript(
+    `Boolean(document.querySelector('[aria-label="Hide password"]'))`,
+  );
+  await clickSelector('[role="button"]:not([aria-label])');
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const loginValidationWorked = await mainWindow.webContents.executeJavaScript(
+    `document.body.innerText.includes('Enter your email and password to continue.')`,
+  );
+  const navigationFixture = await mainWindow.webContents.executeJavaScript(`(() => {
+    const drag = document.createElement('div');
+    drag.dataset.testid = 'window-drag-region';
+    Object.assign(drag.style, { position: 'fixed', left: '260px', top: '30px', zIndex: '2147483646' });
+    const nav = document.createElement('div');
+    nav.dataset.testid = 'window-no-drag';
+    const button = document.createElement('button');
+    button.dataset.testid = 'top-nav-button';
+    button.textContent = 'Navigation test';
+    button.addEventListener('click', () => { button.dataset.clicked = 'true'; });
+    nav.append(button);
+    drag.append(nav);
+    document.body.append(drag);
+    const rect = button.getBoundingClientRect();
+    return {
+      selector: '[data-testid="top-nav-button"]',
+      region: getComputedStyle(button).getPropertyValue('-webkit-app-region'),
+      backgroundBeforeHover: getComputedStyle(button).backgroundColor,
+      point: { x: Math.round(rect.left + rect.width / 2), y: Math.round(rect.top + rect.height / 2) },
+    };
+  })()`);
+  mainWindow.webContents.sendInputEvent({ type: 'mouseMove', ...navigationFixture.point });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  const navigationHoverBackground = await mainWindow.webContents.executeJavaScript(
+    `getComputedStyle(document.querySelector('[data-testid="top-nav-button"]')).backgroundColor`,
+  );
+  await clickSelector(navigationFixture.selector);
+  await new Promise((resolve) => setTimeout(resolve, 80));
+  const navigationClickWorked = await mainWindow.webContents.executeJavaScript(
+    `document.querySelector('[data-testid="top-nav-button"]')?.dataset.clicked === 'true'`,
+  );
+  await clickSelector('[aria-label="Minimize window"]');
   await new Promise((resolve) => setTimeout(resolve, 250));
   const minimized = mainWindow.isMinimized();
   mainWindow.restore();
   mainWindow.show();
-  await clickControl('Maximize window');
+  await clickSelector('[aria-label="Maximize window"]');
   await new Promise((resolve) => setTimeout(resolve, 250));
   const maximized = mainWindow.isMaximized();
-  await clickControl('Maximize window');
+  await clickSelector('[aria-label="Maximize window"]');
   await new Promise((resolve) => setTimeout(resolve, 180));
   const restored = !mainWindow.isMaximized();
   await mkdir(path.dirname(controlTestPath), { recursive: true });
-  await writeFile(controlTestPath, JSON.stringify({ ...renderer, minimized, maximized, restored }, null, 2));
-  await clickControl('Close window');
+  await writeFile(controlTestPath, JSON.stringify({
+    ...initialRenderer,
+    passwordToggleWorked,
+    loginValidationWorked,
+    navigationRegion: navigationFixture.region,
+    navigationHoverWorked: navigationHoverBackground !== navigationFixture.backgroundBeforeHover,
+    navigationClickWorked,
+    minimized,
+    maximized,
+    restored,
+  }, null, 2));
+  await clickSelector('[aria-label="Close window"]');
 }
 
 async function boot() {

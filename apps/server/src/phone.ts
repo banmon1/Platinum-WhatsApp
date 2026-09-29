@@ -1,11 +1,11 @@
+import { parsePhoneNumberFromString } from 'libphonenumber-js/max';
 export function normalizePhone(raw: string): string | null {
-  const trimmed = raw.trim();
-  if (!trimmed) return null;
-  let digits = trimmed.replace(/[^\d+]/g, '');
-  if (digits.startsWith('00')) digits = `+${digits.slice(2)}`;
-  digits = digits.replace(/\D/g, '');
-  if (digits.length < 8 || digits.length > 15) return null;
-  return digits;
+  let input=raw.trim().replace(/[٠-٩۰-۹]/g,c=>String(c.charCodeAt(0)-(c>='۰'?1776:1632)));
+  if (!/^[+\d\s().-]+$/.test(input)) return null;
+  if(input.startsWith('00')) input='+'+input.slice(2);
+  if(!input.startsWith('+')) input='+'+input;
+  const phone=parsePhoneNumberFromString(input);
+  return phone?.isValid()?phone.number.slice(1):null;
 }
 
 export function normalizePhones(values: string[]): { valid: string[]; invalid: string[] } {

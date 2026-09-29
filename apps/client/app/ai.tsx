@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, Switch,   useWindowDimensions, View } from 'react-native';
+import { TextInput, Text } from '@/i18n';
 import { Bot, KeyRound, MessageCircle, Save, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { AppShell } from '@/components/AppShell';
 import { ActionButton, Eyebrow, PageHeader, SectionCard, StatusBadge } from '@/components/UI';

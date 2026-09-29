@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ApiClient, type ActivityEvent, type AiSettings, type Campaign, type WhatsAppStatus } from '../api';
+import { ApiClient, ApiError, type ActivityEvent, type AiSettings, type Campaign, type WhatsAppStatus } from '../api';
 import {
   clearAuthToken,
   defaultApiUrl,
@@ -119,11 +119,16 @@ export function AppProvider({children}:{children:ReactNode}) {
         beginSession(storedToken);
         applySnapshot(snapshot);
         setAuthState('signedIn');
-      } catch {
-        await clearAuthToken();
+      } catch (error) {
         if (!active) return;
         resetProtectedState();
-        setAuthState('signedOut');
+        if (error instanceof ApiError && error.status === 401) {
+          await clearAuthToken();
+          setAuthState('signedOut');
+        } else {
+          beginSession(storedToken);
+          setAuthState('signedIn');
+        }
       } finally {
         if (active) setLoading(false);
       }

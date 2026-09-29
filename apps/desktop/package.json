@@ -1,12 +1,13 @@
 {
   "name": "@platinum/desktop",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "main": "nabilo-protected/main.mjs",
   "scripts": {
     "prepare:runtime": "npm run build -w @platinum/server && npm run export:web -w @platinum/client && node scripts/nabilo-prepare-runtime.mjs && node scripts/nabilo-build-icon.mjs",
     "verify:hardening": "node scripts/nabilo-verify-hardening.mjs",
+    "verify:window-controls": "npm run prepare:runtime && node scripts/nabilo-verify-window-controls.mjs",
     "verify:installer-safety": "node scripts/nabilo-verify-installer-safety.mjs",
     "start": "npm run prepare:runtime && electron .",
     "dist:win": "npm run verify:installer-safety && npm run prepare:runtime && electron-builder --win nsis --x64"
@@ -16,6 +17,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "libphonenumber-js": "^1.13.14",
     "openai": "^5.20.1",
     "pino": "^9.14.0",
     "qrcode": "^1.5.4",
@@ -64,7 +66,9 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },

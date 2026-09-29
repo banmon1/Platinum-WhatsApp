@@ -20,7 +20,7 @@ test('login sessions are random, expire, and can be revoked', () => {
   const third = guard.login('owner@example.test', 'correct');
   assert.equal(third.ok, true);
   if (!third.ok) return;
-  now += 25 * 60 * 60 * 1_000;
+  now += 91 * 24 * 60 * 60 * 1_000;
   assert.equal(guard.isAuthorized(third.token), false);
 });
 
@@ -39,4 +39,22 @@ test('bearer parsing accepts only a bounded URL-safe token', () => {
   assert.equal(readBearerToken(`Bearer ${token}`), token);
   assert.equal(readBearerToken(`Basic ${token}`), null);
   assert.equal(readBearerToken('Bearer short'), null);
+});
+
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+test('sessions survive restart without storing tokens and logout stays revoked', () => {
+ const directory=mkdtempSync(join(tmpdir(),'nabilo-session-test-'));
+ try {
+  const file=join(directory,'sessions.json');
+  const first=new LoginGuard(()=>true,()=>1000,file);
+  const login=first.login('owner@example.test','test');
+  assert.equal(login.ok,true); if(!login.ok)return;
+  assert.equal(readFileSync(file,'utf8').includes(login.token),false);
+  const restarted=new LoginGuard(()=>true,()=>1000+48*3600000,file);
+  assert.equal(restarted.isAuthorized(login.token),true);
+  restarted.logout(login.token);
+  assert.equal(new LoginGuard(()=>true,()=>1000,file).isAuthorized(login.token),false);
+ } finally { rmSync(directory,{recursive:true,force:true}); }
 });
